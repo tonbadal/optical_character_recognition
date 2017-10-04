@@ -4,7 +4,8 @@ Optical Character Recognition (OCR) implemented with Convolutional Neural Networ
 
 ## Usage
 
-Download
+Download the dataset in the link below to this folder and execute the "ocr_deep.py" file.
+
 
 ### Data set
 
