@@ -8,6 +8,9 @@ import time
 import argparse
 import tempfile
 
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
 import tensorflow as tf
 
 from data_providers import DataProvider
@@ -175,6 +178,33 @@ class ConvolutionNN:
 
             self.saver.save(sess, self.savefile)
 
+    def continue_train(self, n_epochs=100):
+        """Load a trained model and save it to self.savefile.
+
+        Args:
+            An integer (n_epochs) defining the number of epochs
+        """
+
+        with tf.Session() as sess:
+            self.saver.restore(sess, self.savefile)
+
+            for e in range(n_epochs):
+                i = 0
+                start_time = time.time()
+                for input_batch, target_batch in self.train_data:
+                    train_accuracy = self.accuracy.eval(
+                        feed_dict={self.x: input_batch, self.y_: target_batch, self.keep_prob: 1.0})
+                    print('epoch {0}, batch {1:03d} - training accuracy: {2:.3f}'.format(e, i, train_accuracy))
+                    self.train_step.run(feed_dict={self.x: input_batch, self.y_: target_batch, self.keep_prob: 0.5})
+                    i += 1
+                print('\t\tepoch {0} completed in {1:.2f} seconds\n'.format(e, time.time() - start_time))
+
+                print('\t\ttest accuracy: %g' % self.accuracy.eval(feed_dict={
+                        self.x: self.test_data.inputs, self.y_: self.test_data.targets, self.keep_prob: 1.0}))
+
+            self.saver.save(sess, self.savefile)
+
+
     def predict(self, input_sample):
         with tf.Session() as sess:
             # restore the model
@@ -189,9 +219,24 @@ if __name__ == '__main__':
                         dest='batch_size', help='Batch size')
     parser.add_argument('-e', '--epochs', type=int, default=10,
                         dest='epochs', help='Number of epochs')
+    parser.add_argument('-m', '--mode', type=str, default='test',
+                        dest='mode', help='Mode, can be train or test')
     args, unparsed = parser.parse_known_args()
 
     CNN = ConvolutionNN(batch_size=args.batch_size)
-    CNN.train(n_epochs=args.epochs)
-    data = DataProvider(100, which_set='test')
-    print(CNN.predict(data.inputs[0]))
+
+    if args.mode == 'train':
+        CNN.train(n_epochs=args.epochs)
+    else:
+        data = DataProvider(batch_size=args.batch_size, which_set='test')
+        for i in range(10):
+            prediction = CNN.predict(data.inputs[i])
+            char_pred = data.id2char[np.argmax(prediction) + 1]
+
+            char_real = data.id2char[np.argmax(data.targets[i]) + 1]
+
+            im_norm = 255 * (1 - data.inputs[i].reshape((28, 28)))
+            im = Image.fromarray(im_norm)
+            plt.imshow(im)
+            plt.title('Predicted: {0} | Real: {1}'.format(char_pred, char_real))
+            plt.show()

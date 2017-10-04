@@ -56,11 +56,11 @@ class DataProvider(object):
         characters = string.digits + string.ascii_uppercase + string.ascii_lowercase
 
         # Create ID - Character dictionary and One-Hot labels dictionary
-        id2char = {}
+        self.id2char = {}
         labels_dict = {}
         for i in range(len(characters)):
             # ID - Character
-            id2char[i + 1] = characters[i]
+            self.id2char[i + 1] = characters[i]
 
             # One Hot encoding
             zeros = np.zeros(self.num_classes)
@@ -72,7 +72,7 @@ class DataProvider(object):
         # Read images
         for folder in folders:
             char_id = int(folder[-2:])
-            one_hot_label = labels_dict[id2char[char_id]]
+            one_hot_label = labels_dict[self.id2char[char_id]]
             images = os.listdir(data_path + folder)
 
             # Load only a proportion of the DB
