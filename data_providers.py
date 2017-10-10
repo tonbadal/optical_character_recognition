@@ -36,7 +36,7 @@ class DataProvider(object):
             rng (RandomState): A seeded random number generator.
         """
         assert which_set in ['train', 'test'], (
-            'Expected which_set to be either train or test. '
+            'Expected which_set to be either "train" or "test". '
             'Got {0}'.format(which_set)
         )
         self.which_set = which_set
@@ -51,26 +51,13 @@ class DataProvider(object):
         self.targets = []
 
         data_path = 'English/Fnt/'
-        folders = os.listdir(data_path)
-        self.num_classes = len(folders)
-        characters = string.digits + string.ascii_uppercase + string.ascii_lowercase
+        self.folders = os.listdir(data_path)
 
-        # Create ID - Character dictionary and One-Hot labels dictionary
-        self.id2char = {}
-        labels_dict = {}
-        for i in range(len(characters)):
-            # ID - Character
-            self.id2char[i + 1] = characters[i]
-
-            # One Hot encoding
-            zeros = np.zeros(self.num_classes)
-            zeros[i] += 1
-            labels_dict[characters[i]] = zeros
-
-            i += 1
+        self.id2char = dict()
+        self.num_classes, characters, labels_dict = self.get_classes()
 
         # Read images
-        for folder in folders:
+        for folder in self.folders:
             char_id = int(folder[-2:])
             one_hot_label = labels_dict[self.id2char[char_id]]
             images = os.listdir(data_path + folder)
@@ -133,6 +120,26 @@ class DataProvider(object):
         self._max_num_batches = value
         self._update_num_batches()
 
+    def get_classes(self):
+        """Returns the number of classes and an array with all the characters."""
+        characters = string.digits + string.ascii_uppercase + string.ascii_lowercase
+        num_classes = len(characters)
+
+        # Create ID - Character dictionary and One-Hot labels dictionary
+        labels_dict = dict()
+        for i in range(len(characters)):
+            # ID - Character
+            self.id2char[i + 1] = characters[i]
+
+            # One Hot encoding
+            zeros = np.zeros(num_classes)
+            zeros[i] += 1
+            labels_dict[characters[i]] = zeros
+
+            i += 1
+
+        return num_classes, characters, labels_dict
+
     def _update_num_batches(self):
         """Updates number of batches to iterate over."""
         # maximum possible number of batches is equal to number of whole times
@@ -193,3 +200,53 @@ class DataProvider(object):
     # Python 3.x compatibility
     def __next__(self):
         return self.next()
+
+
+class AlphabeticalDataProvider(DataProvider):
+    def get_classes(self):
+        """Returns the number of classes and an array with all the characters."""
+        characters = string.ascii_uppercase + string.ascii_lowercase
+        num_classes = len(characters)
+
+        # Create ID - Character dictionary and One-Hot labels dictionary
+        labels_dict = dict()
+        for i in range(len(characters)):
+            # ID - Character
+            self.id2char[i + 1 + 10] = characters[i]
+
+            # One Hot encoding
+            zeros = np.zeros(num_classes)
+            zeros[i] += 1
+            labels_dict[characters[i]] = zeros
+
+            i += 1
+
+        self.folders = self.folders[-num_classes:]
+
+        return num_classes, characters, labels_dict
+
+
+class NumericalDataProvider(DataProvider):
+    def get_classes(self):
+        """Returns the number of classes and an array with all the characters."""
+
+        characters = string.digits
+        num_classes = len(characters)
+
+        # Create ID - Character dictionary and One-Hot labels dictionary
+        labels_dict = dict()
+        for i in range(len(characters)):
+            # ID - Character
+            self.id2char[i + 1] = characters[i]
+
+            # One Hot encoding
+            zeros = np.zeros(num_classes)
+            zeros[i] += 1
+            labels_dict[characters[i]] = zeros
+
+            i += 1
+
+        self.folders = self.folders[:num_classes]
+
+        return num_classes, characters, labels_dict
+

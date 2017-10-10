@@ -13,13 +13,14 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import tensorflow as tf
 
-from data_providers import DataProvider
+from data_providers import DataProvider, AlphabeticalDataProvider, NumericalDataProvider
 
 FLAGS = None
 
 
 class ConvolutionNN:
-    def __init__(self, batch_size=100, file_name='ocr_conv_nn', path='ocr_model/'):
+    def __init__(self, batch_size=100, file_name='ocr_conv_nn',
+                 data_type='all', path='ocr_model_all/'):
         """Constructor of the Convolutional Neural Network model
 
         Args:
@@ -28,8 +29,20 @@ class ConvolutionNN:
             where the model will be saved.
         """
         # Load the data
-        self.train_data = DataProvider(batch_size, which_set='train')
-        self.test_data = DataProvider(batch_size, which_set='test')
+        assert data_type in ['all', 'alphabetical', 'numerical'], (
+            'Expected data_type to be either "all", "alphabetical" or "numerical". '
+            'Got {0}'.format(data_type)
+        )
+        if data_type == 'all':
+            self.train_data = DataProvider(batch_size, which_set='train')
+            self.test_data = DataProvider(batch_size, which_set='test')
+        elif data_type == 'alphabetical':
+            self.train_data = AlphabeticalDataProvider(batch_size, which_set='train')
+            self.test_data = AlphabeticalDataProvider(batch_size, which_set='test')
+        elif data_type == 'numerical':
+            self.train_data = NumericalDataProvider(batch_size, which_set='train')
+            self.test_data = NumericalDataProvider(batch_size, which_set='test')
+
         self.n_classes = self.train_data.num_classes
 
         # Create the model
@@ -186,6 +199,7 @@ class ConvolutionNN:
         """
 
         with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
             self.saver.restore(sess, self.savefile)
 
             for e in range(n_epochs):
@@ -220,13 +234,16 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--epochs', type=int, default=10,
                         dest='epochs', help='Number of epochs')
     parser.add_argument('-m', '--mode', type=str, default='test',
-                        dest='mode', help='Mode, can be train or test')
+                        dest='mode', help='Mode, can be "train" or "test"')
     args, unparsed = parser.parse_known_args()
 
-    CNN = ConvolutionNN(batch_size=args.batch_size)
+    CNN = ConvolutionNN(batch_size=args.batch_size, data_type='all',
+                        path='ocr_model_all/')
 
     if args.mode == 'train':
         CNN.train(n_epochs=args.epochs)
+    elif args.mode == 'continue_training':
+        CNN.continue_train(n_epochs=args.epochs)
     else:
         data = DataProvider(batch_size=args.batch_size, which_set='test')
         for i in range(10):
