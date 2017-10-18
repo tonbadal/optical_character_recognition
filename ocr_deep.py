@@ -125,12 +125,13 @@ class ConvolutionNN:
         cross_entropy = tf.reduce_mean(cross_entropy)
 
         with tf.name_scope('adam_optimizer'):
-            self.train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+            #self.train_step = tf.train.MomentumOptimizer(1e-4, 1e-6).minimize(cross_entropy)
+            self.train_step = tf.train.AdamOptimizer(1e-4, name='train_step').minimize(cross_entropy)
 
         with tf.name_scope('accuracy'):
             correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(self.y_, 1))
             correct_prediction = tf.cast(correct_prediction, tf.float32)
-        self.accuracy = tf.reduce_mean(correct_prediction)
+            self.accuracy = tf.reduce_mean(correct_prediction)
 
         graph_location = tempfile.mkdtemp()
         print('Saving graph to: %s' % graph_location)
@@ -175,21 +176,24 @@ class ConvolutionNN:
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            for e in range(n_epochs):
-                i = 0
-                start_time = time.time()
-                for input_batch, target_batch in self.train_data:
-                    train_accuracy = self.accuracy.eval(
-                        feed_dict={self.x: input_batch, self.y_: target_batch, self.keep_prob: 1.0})
-                    print('epoch {0}, batch {1:03d} - training accuracy: {2:.3f}'.format(e, i, train_accuracy))
-                    self.train_step.run(feed_dict={self.x: input_batch, self.y_: target_batch, self.keep_prob: 0.5})
-                    i += 1
-                print('\t\tepoch {0} completed in {1:.2f} seconds\n'.format(e, time.time() - start_time))
 
-                print('\t\ttest accuracy: %g' % self.accuracy.eval(feed_dict={
-                        self.x: self.test_data.inputs, self.y_: self.test_data.targets, self.keep_prob: 1.0}))
+            try:
+                for e in range(n_epochs):
+                    i = 0
+                    start_time = time.time()
+                    for input_batch, target_batch in self.train_data:
+                        train_accuracy = self.accuracy.eval(
+                            feed_dict={self.x: input_batch, self.y_: target_batch, self.keep_prob: 1.0})
+                        print('epoch {0}, batch {1:03d} - training accuracy: {2:.3f}'.format(e, i, train_accuracy))
+                        self.train_step.run(feed_dict={self.x: input_batch, self.y_: target_batch, self.keep_prob: 0.5})
+                        i += 1
+                    print('\t\tepoch {0} completed in {1:.2f} seconds\n'.format(e, time.time() - start_time))
 
-            self.saver.save(sess, self.savefile)
+                    print('\t\ttest accuracy: %g' % self.accuracy.eval(feed_dict={
+                            self.x: self.test_data.inputs, self.y_: self.test_data.targets, self.keep_prob: 1.0}))
+
+            finally:
+                self.saver.save(sess, self.savefile)
 
     def continue_train(self, n_epochs=100):
         """Load a trained model and save it to self.savefile.
@@ -231,26 +235,25 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', '--batches', type=int, default=100,
                         dest='batch_size', help='Batch size')
-    parser.add_argument('-e', '--epochs', type=int, default=10,
+    parser.add_argument('-e', '--epochs', type=int, default=20,
                         dest='epochs', help='Number of epochs')
     parser.add_argument('-m', '--mode', type=str, default='test',
                         dest='mode', help='Mode, can be "train" or "test"')
     args, unparsed = parser.parse_known_args()
 
-    CNN = ConvolutionNN(batch_size=args.batch_size, data_type='all',
-                        path='ocr_model_all/')
+    CNN = ConvolutionNN(batch_size=args.batch_size, data_type='numerical',
+                        path='ocr_model_num/')
 
     if args.mode == 'train':
         CNN.train(n_epochs=args.epochs)
     elif args.mode == 'continue_training':
         CNN.continue_train(n_epochs=args.epochs)
     else:
-        data = DataProvider(batch_size=args.batch_size, which_set='test')
+        data = CNN.test_data
         for i in range(10):
             prediction = CNN.predict(data.inputs[i])
-            char_pred = data.id2char[np.argmax(prediction) + 1]
-
-            char_real = data.id2char[np.argmax(data.targets[i]) + 1]
+            char_pred = data.id2char[10 + np.argmax(prediction) + 1]
+            char_real = data.id2char[10 + np.argmax(data.targets[i]) + 1]
 
             im_norm = 255 * (1 - data.inputs[i].reshape((28, 28)))
             im = Image.fromarray(im_norm)
