@@ -20,7 +20,7 @@ FLAGS = None
 
 class ConvolutionNN:
     def __init__(self, batch_size=100, file_name='ocr_conv_nn',
-                 data_type='all', path='ocr_model_all/'):
+                 data_type='all', path=None):
         """Constructor of the Convolutional Neural Network model
 
         Args:
@@ -36,12 +36,15 @@ class ConvolutionNN:
         if data_type == 'all':
             self.train_data = DataProvider(batch_size, which_set='train')
             self.test_data = DataProvider(batch_size, which_set='test')
+            path2 = 'ocr_model_all/'
         elif data_type == 'alphabetical':
             self.train_data = AlphabeticalDataProvider(batch_size, which_set='train')
             self.test_data = AlphabeticalDataProvider(batch_size, which_set='test')
+            path2 = 'ocr_model_alpha/'
         elif data_type == 'numerical':
             self.train_data = NumericalDataProvider(batch_size, which_set='train')
             self.test_data = NumericalDataProvider(batch_size, which_set='test')
+            path2 = 'ocr_model_num/'
 
         self.n_classes = self.train_data.num_classes
 
@@ -51,6 +54,8 @@ class ConvolutionNN:
         # Build the graph for the deep net
         self.y_conv, self.keep_prob = self.build()
 
+        if not path:
+            path = path2
         # Path where the file will be saved
         self.savefile = path + file_name
 
@@ -241,8 +246,8 @@ if __name__ == '__main__':
                         dest='mode', help='Mode, can be "train" or "test"')
     args, unparsed = parser.parse_known_args()
 
-    CNN = ConvolutionNN(batch_size=args.batch_size, data_type='alphabetical',
-                        path='ocr_model_alpha/')
+    data_type = 'numerical'
+    CNN = ConvolutionNN(batch_size=args.batch_size, data_type=data_type)
 
     if args.mode == 'train':
         CNN.train(n_epochs=args.epochs)
@@ -252,8 +257,12 @@ if __name__ == '__main__':
         data = CNN.test_data
         for i in range(10):
             prediction = CNN.predict(data.inputs[i])
-            char_pred = data.id2char[10 + np.argmax(prediction) + 1]
-            char_real = data.id2char[10 + np.argmax(data.targets[i]) + 1]
+            if data_type == 'alphabetical':
+                char_pred = data.id2char[10 + np.argmax(prediction) + 1]
+                char_real = data.id2char[10 + np.argmax(data.targets[i]) + 1]
+            else:
+                char_pred = data.id2char[np.argmax(prediction) + 1]
+                char_real = data.id2char[np.argmax(data.targets[i]) + 1]
 
             im_norm = 255 * (1 - data.inputs[i].reshape((28, 28)))
             im = Image.fromarray(im_norm)
