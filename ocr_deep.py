@@ -233,16 +233,16 @@ class ConvolutionNN:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-b', '--batches', type=int, default=100,
+    parser.add_argument('-b', '--batchSize', type=int, default=100,
                         dest='batch_size', help='Batch size')
     parser.add_argument('-e', '--epochs', type=int, default=20,
                         dest='epochs', help='Number of epochs')
-    parser.add_argument('-m', '--mode', type=str, default='test',
+    parser.add_argument('-m', '--mode', type=str, default='train',
                         dest='mode', help='Mode, can be "train" or "test"')
     args, unparsed = parser.parse_known_args()
 
-    CNN = ConvolutionNN(batch_size=args.batch_size, data_type='numerical',
-                        path='ocr_model_num/')
+    CNN = ConvolutionNN(batch_size=args.batch_size, data_type='alphabetical',
+                        path='ocr_model_alpha/')
 
     if args.mode == 'train':
         CNN.train(n_epochs=args.epochs)

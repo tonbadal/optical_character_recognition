@@ -58,7 +58,11 @@ class DataProvider(object):
 
         # Read images
         for folder in self.folders:
+
             char_id = int(folder[-2:])
+            if char_id not in self.id2char.keys():
+                continue
+
             one_hot_label = labels_dict[self.id2char[char_id]]
             images = os.listdir(data_path + folder)
 
